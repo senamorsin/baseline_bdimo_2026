@@ -11,3 +11,7 @@ departments = data['department_id'].value_counts()
 categories = data['category_id'].value_counts()
 print(departments)
 print(categories)
+
+
+def create_features_from_text(text):
+    features = dict()
