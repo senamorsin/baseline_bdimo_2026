@@ -67,8 +67,8 @@ def format_description(df: pd.DataFrame):
 def process_description(df: pd.DataFrame) -> pd.DataFrame:
     new_df = df.copy()
     new_df["description"] = new_df["description"].fillna("").apply(html.unescape)
-    new_df = pd.concat([new_df, pd.DataFrame(new_df["description"].apply(parse_description).to_list())], axis=1)
-    return format_description(new_df).fillna("")
+    features_df = pd.DataFrame(new_df["description"].apply(parse_description).to_list())
+    return new_df.join(features_df)
 
 
 def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer]) -> pd.DataFrame:
@@ -77,8 +77,8 @@ def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer
         sparse = vectorizer.transform(df["description"])
         cols = [f"{name}_{i}" for i in range(sparse.shape[1])]
         sparse_df = pd.DataFrame(sparse.toarray(), columns=cols) # type: ignore
-        dfs.append(sparse_df)
-    return pd.concat([df, *dfs], axis=1)
+        dfs.append(sparse_df.sort_index())
+    return df.sort_index().join(dfs, how="left")
 
 
 def fromat_vendor_name(df: pd.DataFrame) -> pd.DataFrame:
