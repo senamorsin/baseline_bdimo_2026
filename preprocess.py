@@ -64,15 +64,33 @@ def format_description(df: pd.DataFrame):
 
 
 def process_description(df: pd.DataFrame) -> pd.DataFrame:
-    df["description"] = df["description"].fillna("").apply(html.unescape)
-    df = pd.concat([df, pd.DataFrame(df["description"].apply(parse_description).to_list())], axis=1)
-    return format_description(df)
+    new_df = df.copy()
+    new_df["description"] = new_df["description"].fillna("").apply(html.unescape)
+    new_df = pd.concat([new_df, pd.DataFrame(new_df["description"].apply(parse_description).to_list())], axis=1)
+    return format_description(new_df)
 
 
+def process_vendor_name(df: pd.DataFrame, top_cats: list[str]) -> pd.DataFrame:
+    new_df = df.copy()
+    new_df["vendor_name"] = new_df["vendor_name"].str.lower()
+    new_df.loc[new_df["vendor_name"].isin(("no brand", "без бренда")), "vendor_name"] = "нет бренда"
+    new_df.loc[~new_df["vendor_name"].isin(top_cats), "vendor_name"] = "OTHER"
+    return new_df
+
+
+def format_category_name(df: pd.DataFrame):
+    df["shop_category_name"] = (
+        df["shop_category_name"].str.lower()
+        .replace(r"[^a-zA-Zа-яА-Я]", "", regex=True)
+        .replace(r"\s+", " ", regex=True)
+    )
+    df.loc[df["shop_category_name"] == " ", "shop_category_name"] = ""
+    return df
 
 def process_shop_category_name(df: pd.DataFrame, top_cats: list[str], model, kmeans: KMeans):
     new_df = df.copy()
+    new_df = format_category_name(new_df)
     embeddings = model.encode(new_df["shop_category_name"].to_list(), convert_to_tensor=True)
     new_df["shop_category_name_cluster"] = kmeans.predict(embeddings.cpu().numpy())
-    new_df["shop_category_name"] = np.where(new_df["shop_category_name"].isin(top_cats), new_df["shop_category_name"], "OTHER")
+    new_df.loc[~new_df["shop_category_name"].isin(top_cats), "shop_category_name"] = "OTHER"
     return new_df
