@@ -68,7 +68,7 @@ def process_description(df: pd.DataFrame) -> pd.DataFrame:
     new_df = df.copy()
     new_df["description"] = new_df["description"].fillna("").apply(html.unescape)
     new_df = pd.concat([new_df, pd.DataFrame(new_df["description"].apply(parse_description).to_list())], axis=1)
-    return format_description(new_df)
+    return format_description(new_df).fillna("")
 
 
 def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer]) -> pd.DataFrame:
@@ -104,11 +104,11 @@ def format_shop_category_name(df: pd.DataFrame):
     return df
 
 
-def process_shop_category_name(df: pd.DataFrame, top_cats: list[str], model, kmeans: KMeans):
+def process_shop_category_name(df: pd.DataFrame, top_cats: list[str]):
     new_df = df.copy()
     new_df["shop_category_name"] = new_df["shop_category_name"].fillna("")
     new_df = format_shop_category_name(new_df)
-    embeddings = model.encode(new_df["shop_category_name"].to_list())
-    new_df["shop_category_name_cluster"] = kmeans.predict(embeddings)
+    # embeddings = model.encode(new_df["shop_category_name"].to_list())
+    # new_df["shop_category_name_cluster"] = kmeans.predict(embeddings) 
     new_df.loc[~new_df["shop_category_name"].isin(top_cats), "shop_category_name"] = "OTHER"
     return new_df
