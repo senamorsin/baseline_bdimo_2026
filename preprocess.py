@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
+import html
 
 def parse_description(text: str):
     if pd.isna(text):
@@ -50,9 +51,22 @@ def parse_description(text: str):
 
     return features
 
+def format_description(df: pd.DataFrame):
+    df["description"] = (
+        df["description"].str.lower()
+        .replace(r"<[^>]+>", "", regex=True)
+        .replace(r"[\n\r\t]+", " ", regex=True)
+        .replace(r"[^a-zA-Zа-яА-Я0-9\s.,;:!?()\-\+\/_\"']", "", regex=True)
+        .replace(r"\s+", " ", regex=True)
+    )
+    df.loc[df["description"] == " ", "description"] = ""
+    return df
+
 
 def process_description(df: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([df, pd.DataFrame(df["description"].apply(parse_description).to_list())], axis=1)
+    df["description"] = df["description"].fillna("").apply(html.unescape)
+    df = pd.concat([df, pd.DataFrame(df["description"].apply(parse_description).to_list())], axis=1)
+    return format_description(df)
 
 
 
