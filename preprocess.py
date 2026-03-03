@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import html
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import TruncatedSVD
 
 def parse_description(text: str):
     if pd.isna(text):
@@ -72,14 +73,16 @@ def process_description(df: pd.DataFrame) -> pd.DataFrame:
     return format_description(new_df.join(features_df)).sort_index()
 
 
-def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer]) -> pd.DataFrame:
+def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer], svds: list[TruncatedSVD | None]) -> pd.DataFrame:
     dfs = []
-    for name, vectorizer in vectorizers.items():
-        sparse = vectorizer.transform(df["description"])
+    for svd, (name, vectorizer) in zip(svds, vectorizers.items()):
+        sparse = vectorizer.transform(df["description"]).toarray() # type: ignore
+        if svd:
+            sparse = svd.transform(sparse) 
         cols = [f"{name}_{i}" for i in range(sparse.shape[1])]
-        sparse_df = pd.DataFrame(sparse.toarray(), columns=cols) # type: ignore
-        dfs.append(sparse_df.sort_index())
-    return df.sort_index().join(dfs, how="left")
+        sparse_df = pd.DataFrame(sparse, columns=cols) 
+        dfs.append(sparse_df)
+    return pd.concat([df.reset_index(), *dfs], axis=1)
 
 
 def fromat_vendor_name(df: pd.DataFrame) -> pd.DataFrame:
