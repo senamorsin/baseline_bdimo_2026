@@ -68,7 +68,7 @@ def process_description(df: pd.DataFrame) -> pd.DataFrame:
     new_df = df.copy()
     new_df["description"] = new_df["description"].fillna("").apply(html.unescape)
     features_df = pd.DataFrame(new_df["description"].apply(parse_description).to_list())
-    return new_df.join(features_df)
+    return format_description(new_df.join(features_df))
 
 
 def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer]) -> pd.DataFrame:
