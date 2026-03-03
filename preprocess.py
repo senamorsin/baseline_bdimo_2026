@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
 import html
+from sklearn.feature_extraction.text import CountVectorizer
 
 def parse_description(text: str):
     if pd.isna(text):
@@ -70,15 +71,30 @@ def process_description(df: pd.DataFrame) -> pd.DataFrame:
     return format_description(new_df)
 
 
+def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer]) -> pd.DataFrame:
+    dfs = []
+    for name, vectorizer in vectorizers.items():
+        sparse = vectorizer.transform(df["description"])
+        cols = [f"{name}_{i}" for i in range(sparse.shape[1])]
+        sparse_df = pd.DataFrame(sparse.toarray(), columns=cols) # type: ignore
+        dfs.append(sparse_df)
+    return pd.concat([df, *dfs], axis=1)
+
+
+def fromat_vendor_name(df: pd.DataFrame) -> pd.DataFrame:
+    df["vendor_name"] = df["vendor_name"].str.lower()
+    return df
+
+
 def process_vendor_name(df: pd.DataFrame, top_cats: list[str]) -> pd.DataFrame:
     new_df = df.copy()
-    new_df["vendor_name"] = new_df["vendor_name"].str.lower()
+    new_df = fromat_vendor_name(new_df)
     new_df.loc[new_df["vendor_name"].isin(("no brand", "без бренда")), "vendor_name"] = "нет бренда"
     new_df.loc[~new_df["vendor_name"].isin(top_cats), "vendor_name"] = "OTHER"
     return new_df
 
 
-def format_category_name(df: pd.DataFrame):
+def format_shop_category_name(df: pd.DataFrame):
     df["shop_category_name"] = (
         df["shop_category_name"].str.lower()
         .replace(r"[^a-zA-Zа-яА-Я]", "", regex=True)
@@ -87,10 +103,12 @@ def format_category_name(df: pd.DataFrame):
     df.loc[df["shop_category_name"] == " ", "shop_category_name"] = ""
     return df
 
+
 def process_shop_category_name(df: pd.DataFrame, top_cats: list[str], model, kmeans: KMeans):
     new_df = df.copy()
-    new_df = format_category_name(new_df)
-    embeddings = model.encode(new_df["shop_category_name"].to_list(), convert_to_tensor=True)
-    new_df["shop_category_name_cluster"] = kmeans.predict(embeddings.cpu().numpy())
+    new_df["shop_category_name"] = new_df["shop_category_name"].fillna("")
+    new_df = format_shop_category_name(new_df)
+    embeddings = model.encode(new_df["shop_category_name"].to_list())
+    new_df["shop_category_name_cluster"] = kmeans.predict(embeddings)
     new_df.loc[~new_df["shop_category_name"].isin(top_cats), "shop_category_name"] = "OTHER"
     return new_df
