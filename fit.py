@@ -77,7 +77,18 @@ vendor_list = {
     "xhorse",
     "yamaha",
     "jiemi",
-    "渲牧"
+    "渲牧",
+    'acer', 'adidas', 'affix', 'aiopeson', 'aiwa', 'ajax', 'alldocube', 'amichevole berchelli', 'anker',
+    'apple', 'arena', 'asp', 'asus', 'avent', 'awox', 'bosch', 'boeleo', 'bobcat', 'bose', 'caterpillar',
+    'canon', 'chanel', 'corsair', 'crucial technology', 'diusapet', 'dell', 'dyson', 'everite', 'fitbit',
+    'fujifilm', 'garmin', 'google', 'green apple', 'gopro', 'hansgrohe', 'haier', 'huawei', 'hp',
+    'htc', 'ibm', 'iconbit', 'inker', 'intel', 'inker', 'isko', 'insta360', 'ipod', 'jack', 'jbl', 'lg',
+    'lifecolor', 'microsoft', 'maxxis', 'maybelline', 'mlay', 'mitsubishi', 'midea', 'nandy brew', 'ninebot',
+    'nike', 'nodata', 'no name', 'nokia', 'nortek', 'nvidia', 'pico', 'philips', 'puma', 'qualcomm',
+    'raf', 'razer', 'reebok', 'sandisk', 'seiko', 'shimano', 'skrossi', 'sony', 'stihl', 'sys',
+    'tornado', 'tp-link', 'tulip', 'vodafone', 'vodafone', 'voslat', 'vpx', 'western digital', 'wowzilla',
+    'xiaomi', 'xlu', 'zte'
+
 }
 
 def extract_brand(row):
