@@ -49,7 +49,57 @@ def clean_text(text):
     filtered_words = [word for word in tokens if word not in all_stopwords]
     return f" ".join(filtered_words)
 
+ #список брендов
+vendor_list = {
+    "3m",
+    "amazon",
+    "at electric",
+    "babolat",
+    "bosch",
+    "brita",
+    "crossfire",
+    "each",
+    "espoir",
+    "fiskars",
+    "hp",
+    "jiemiwl",
+    "kindle",
+    "liitokala",
+    "marella",
+    "mercury",
+    "nauxlu",
+    "radiomaster",
+    "romiky",
+    "sunuo",
+    "tbs",
+    "vvdi",
+    "worx",
+    "xhorse",
+    "yamaha",
+    "jiemi",
+    "渲牧"
+}
+
+def extract_brand(row):
+    if pd.isna(row['vendor_name']) or row['vendor_name'] in ['Нет бренда', 'Без бренда']:
+        text_to_search = f"{row['title']} {row['description']} {row['shop_category_name']}"
+
+        # Ищем бренды из нашего списка (без учета регистра)
+        for brand in vendor_list:
+            if re.search(rf'\b{brand}\b', text_to_search, re.IGNORECASE):
+                return brand
+
+    return row['vendor_name']
+df['vendor_name'] = df.apply(extract_brand, axis=1)
+
 df['description'] = df['description'].apply(clean_text)
+
+cols_to_fix = ['title', 'description', 'vendor_name', 'vendor_code', 'shop_category_name']
+
+for col in cols_to_fix:
+    df[col] = df[col].astype(str).fillna('')
+    # Додатково приберемо 'nan' як рядок, який іноді з'являється після astype(str)
+    df[col] = df[col].replace('nan', '')
 
 
 #SPLIT
