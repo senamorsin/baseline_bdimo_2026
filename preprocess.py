@@ -101,7 +101,7 @@ def process_vendor_name(df: pd.DataFrame, top_cats: list[str]) -> pd.DataFrame:
 def format_shop_category_name(df: pd.DataFrame):
     df["shop_category_name"] = (
         df["shop_category_name"].str.lower()
-        .replace(r"[^a-zA-Zа-яА-Я]", "", regex=True)
+        .replace(r"[^a-zA-Zа-яА-Я ]", "", regex=True)
         .replace(r"\s+", " ", regex=True)
     )
     df.loc[df["shop_category_name"] == " ", "shop_category_name"] = ""
