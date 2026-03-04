@@ -12,8 +12,8 @@ nltk.download('punkt_tab')
 nltk.download('stopwords')
 
 #ЗАГРУЗКА ДАТАСЕТА
-data = pd.read_csv('train.tsv', sep='\t')
-data = data.fillna('')
+df = pd.read_csv('train.tsv', sep='\t')
+df = df.fillna('')
 
 #Чистка
 stop_words = {'<br>', '<br/>', '<p>', '</p>', '<ul>', '</ul>', '<li>', '</li>', '<a>', '</a>', '<b>', '</b>',
@@ -21,24 +21,12 @@ stop_words = {'<br>', '<br/>', '<p>', '</p>', '<ul>', '</ul>', '<li>', '</li>', 
 
 
 
-def clean_text(text):
-    text = text.lower()
-    text = re.sub(r'[^а-яёa-z\s]', '', text)
-    text = re.sub(r'<[^>]*>', '', text)
-    text = text.strip()
-    tokens = word_tokenize(text)
-    stop_words_lmtk = set(stopwords.words('russian'))
-    filtered_tokens = [word for word in tokens if word not in stop_words]
-    filtered_words = [word for word in filtered_tokens  if word not in stop_words]
-    return f" ".join(filtered_words)
 
 
-data['description'] = data['description'].apply(clean_text)
-
-data['vendor_name'] = data['vendor_name'].replace([",Без бренда", "Нет бренда"], None)
+df['vendor_name'] = df['vendor_name'].replace([",Без бренда", "Нет бренда"], None)
 
 vectorizer = TfidfVectorizer()
-vectorizer.fit(data['description'])
+vectorizer.fit(df['description'])
 feature_names = vectorizer.get_feature_names_out()
 idf_scores = vectorizer.idf_
 words_idf = pd.DataFrame({'word': feature_names, 'idf': idf_scores})
@@ -49,10 +37,24 @@ with open('custom_stopwords.txt', 'w', encoding='utf-8') as f:
     for word in corpus_stopwords:
         f.write(f"{word}\n")
 
+base_stopwords = set(stopwords.words('russian'))
+custom_stopwords = set(corpus_stopwords)
+all_stopwords = base_stopwords.union(custom_stopwords)
+
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r'[^а-яёa-z\s]', '', text)
+    text = re.sub(r'<[^>]*>', '', text)
+    tokens = text.split()
+    filtered_words = [word for word in tokens if word not in all_stopwords]
+    return f" ".join(filtered_words)
+
+df['description'] = df['description'].apply(clean_text)
+
 
 #SPLIT
-X_train, X_test, y_train, y_test = train_test_split(data.drop(['category_id', 'department_id'], axis=1),
-                                                    data['department_id'],
+X_train, X_test, y_train, y_test = train_test_split(df.drop(['category_id', 'department_id'], axis=1),
+                                                    df['department_id'],
                                                     test_size=0.2, random_state=42)
 
 catboost_clf = CatBoostClassifier(iterations=2500, learning_rate=0.01, depth=6, verbose=True, task_type="GPU")
