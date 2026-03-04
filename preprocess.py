@@ -1,11 +1,12 @@
 import re
-import pandas as pd
 from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
 import html
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import TruncatedSVD
+from typing import Any
+from sklearn.preprocessing import OneHotEncoder
 
 def parse_description(text: str):
     if pd.isna(text):
@@ -73,29 +74,39 @@ def process_description(df: pd.DataFrame) -> pd.DataFrame:
     return format_description(new_df.join(features_df)).sort_index()
 
 
-def extract_description(df: pd.DataFrame, vectorizers: dict[str, CountVectorizer], svds: list[TruncatedSVD | None]) -> pd.DataFrame:
+def extract_description(df: pd.DataFrame, estimators_dict: dict[str, tuple[Any, ...]]) -> pd.DataFrame:
     dfs = []
-    for svd, (name, vectorizer) in zip(svds, vectorizers.items()):
-        sparse = vectorizer.transform(df["description"]).toarray() # type: ignore
-        if svd:
-            sparse = svd.transform(sparse) 
-        cols = [f"{name}_{i}" for i in range(sparse.shape[1])]
-        sparse_df = pd.DataFrame(sparse, columns=cols) 
-        dfs.append(sparse_df)
-    return pd.concat([df.reset_index(), *dfs], axis=1)
+    for name, estimators in estimators_dict.items():
+        features = estimators[0].transform(df["description"]).toarray() # type: ignore
+        for estimator in estimators[1:]:
+            features = estimator.transform(features) 
+        columns = [f"{name}_{i}" for i in range(features.shape[1])]
+        features_df = pd.DataFrame(features, columns=columns) 
+        dfs.append(features_df)
+    return pd.concat([df, *dfs], axis=1)
 
 
-def fromat_vendor_name(df: pd.DataFrame) -> pd.DataFrame:
+def format_vendor_name(df: pd.DataFrame) -> pd.DataFrame:
     df["vendor_name"] = df["vendor_name"].str.lower()
     return df
 
 
 def process_vendor_name(df: pd.DataFrame, top_cats: list[str]) -> pd.DataFrame:
     new_df = df.copy()
-    new_df = fromat_vendor_name(new_df)
+    new_df = format_vendor_name(new_df)
     new_df.loc[new_df["vendor_name"].isin(("no brand", "без бренда")), "vendor_name"] = "нет бренда"
     new_df.loc[~new_df["vendor_name"].isin(top_cats), "vendor_name"] = "OTHER"
     return new_df
+
+def extract_vendor_name(df: pd.DataFrame, oh: OneHotEncoder):
+    features_enc = pd.DataFrame(
+        oh.transform(df[["vendor_name"]]).toarray(), # type: ignore
+        columns=[
+            "vendor_name_{name}".format(name=name.replace(" ", "_"))
+            for name in oh.categories_[0] # type: ignore
+        ],
+    )
+    return pd.concat([df, features_enc], axis=1)
 
 
 def format_shop_category_name(df: pd.DataFrame):
@@ -112,7 +123,16 @@ def process_shop_category_name(df: pd.DataFrame, top_cats: list[str]):
     new_df = df.copy()
     new_df["shop_category_name"] = new_df["shop_category_name"].fillna("")
     new_df = format_shop_category_name(new_df)
-    # embeddings = model.encode(new_df["shop_category_name"].to_list())
-    # new_df["shop_category_name_cluster"] = kmeans.predict(embeddings) 
     new_df.loc[~new_df["shop_category_name"].isin(top_cats), "shop_category_name"] = "OTHER"
     return new_df
+
+
+def extract_shop_category_name(df: pd.DataFrame, oh: OneHotEncoder):
+    features_enc = pd.DataFrame(
+        oh.transform(df[["shop_category_name"]]).toarray(), # type: ignore
+        columns=[
+            "shop_category_name_{name}".format(name=name.replace(" ", "_"))
+            for name in oh.categories_[0] # type: ignore
+        ],
+    )
+    return pd.concat([df, features_enc], axis=1)
