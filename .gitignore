@@ -1,4 +1,5 @@
 __pycache__
-/train.tsv
+train.tsv
 model.joblib
 artifacts.pkl
+.venv
