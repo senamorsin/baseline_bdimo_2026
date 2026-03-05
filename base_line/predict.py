@@ -1,30 +1,48 @@
-def predict():
-    import pickle
-    import pandas as pd
-    from sklearn.feature_extraction.text import CountVectorizer
-    from sklearn.naive_bayes import MultinomialNB
+import joblib
+import pandas as pd
 
-    test = pd.read_csv("test.tsv", sep="\t")
+from fit import (
+    FEATURE_COLUMNS,
+    preprocess_frame as fit_preprocess_frame,
+    predict_with_artifacts,
+)
 
-
-    def conver_to_text(row):
-        return " ".join(map(str, row))
-
-
-    test_texts = test.apply(conver_to_text, axis=1)
+MODEL_PATH = "model.joblib"
+INPUT_PATH = "test.tsv"
+OUTPUT_PATH = "prediction.csv"
 
 
-    with open("model.pkl", 'rb') as file:
-        vectorizer = pickle.load(file)
-        cat_clf = pickle.load(file)
-        dep_clf = pickle.load(file)
-
-    X = vectorizer.transform(test_texts)
-
-    submission = pd.DataFrame()
-
-    submission["category_id"] = cat_clf.predict(X)
-    submission["department_id"] = dep_clf.predict(X)
+def read_input_frame(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path, sep="\t", usecols=lambda c: c in FEATURE_COLUMNS)
+    for col in FEATURE_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+    return df[FEATURE_COLUMNS]
 
 
-    submission.to_csv("prediction.csv", index=False)
+def preprocess_frame(
+    df: pd.DataFrame, description_stopwords: set[str] | None = None
+) -> pd.DataFrame:
+    prepared, _ = fit_preprocess_frame(df, description_stopwords=description_stopwords)
+    return prepared
+
+
+def predict(input_path: str, output_path: str, model_path: str) -> None:
+    artifacts = joblib.load(model_path)
+    test_df = read_input_frame(input_path)
+
+    stopwords = set(artifacts["description_stopwords"])
+    prepared = preprocess_frame(test_df, description_stopwords=stopwords)
+    cat_pred, dept_pred = predict_with_artifacts(prepared, artifacts)
+
+    out = pd.DataFrame(
+        {
+            "department_id": dept_pred.astype(int),
+            "category_id": cat_pred.astype(int),
+        }
+    )
+    out.to_csv(output_path, index=False)
+
+
+if __name__ == "__main__":
+    predict(INPUT_PATH, OUTPUT_PATH, MODEL_PATH)
